@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<!-- saved from url=(0074)file:///C:/Users/renanmaldonado/Downloads/enunciado_desafio_execucoes.html -->
+<html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <title>Desafio Técnico - Divisão de Execuções entre Fundos</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; color: #333; }
+        h1, h2, h3 { color: #004080; }
+        table { border-collapse: collapse; width: 60%; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        code { background-color: #f4f4f4; padding: 2px 4px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Desafio Técnico: Algoritmo Genético para Divisão de Execuções entre Fundos</h1>
+
+    <h2>🎯 Objetivo</h2>
+    <p>Desenvolver um algoritmo genético em Python que divida execuções de uma ordem de compra de ações entre diferentes fundos de investimento, respeitando alocações inteiras e buscando minimizar a diferença entre o preço médio de cada fundo e o preço médio global da ordem.</p>
+
+    <h2>📚 Parte 1 – Conceitos Fundamentais</h2>
+
+    <h3>🏦 Fundo de Investimento</h3>
+    <p>Um fundo de investimento é uma estrutura que reúne recursos de diversos investidores para aplicar em ativos financeiros. Cada fundo possui um patrimônio próprio e uma estratégia de investimento definida. O gestor do fundo é responsável por tomar decisões de compra e venda de ativos.</p>
+
+    <h3>📈 Ordem</h3>
+    <p>Uma ordem é uma instrução de compra ou venda de um ativo no mercado. No contexto deste desafio, o gestor emite uma única ordem para atender a vários fundos simultaneamente. Essa ordem representa a soma das quantidades que cada fundo deseja comprar.</p>
+
+    <h3>🧮 Alocação</h3>
+    <p>A alocação define quanto cada fundo está levando da ordem. Por exemplo, se a ordem total é de 100.000 ações, a alocação pode ser:</p>
+    <table>
+        <tbody><tr><th>Fundo</th><th>Quantidade</th></tr>
+        <tr><td>Fundo 1</td><td>47.000</td></tr>
+        <tr><td>Fundo 2</td><td>23.000</td></tr>
+        <tr><td>Fundo 3</td><td>21.600</td></tr>
+        <tr><td>Fundo 4</td><td>5.100</td></tr>
+        <tr><td>Fundo 5</td><td>2.700</td></tr>
+        <tr><td>Fundo 6</td><td>400</td></tr>
+        <tr><td>Fundo 7</td><td>200</td></tr>
+    </tbody></table>
+
+    <h3>🔄 Execução</h3>
+    <p>A ordem é executada em partes ao longo do dia. Cada execução tem:</p>
+    <ul>
+        <li>Uma <strong>quantidade</strong> de ações</li>
+        <li>Um <strong>preço</strong> (que pode variar ao longo do dia)</li>
+    </ul>
+
+    <h3>💰 Preço Médio da Ordem</h3>
+    <p>É a média ponderada dos preços das execuções, considerando suas respectivas quantidades. No desafio, esse valor é fixado em <strong>R$10,48</strong> para todos os cenários.</p>
+
+    <h3>🧩 Divisão</h3>
+    <p>Ao final do dia, o gestor precisa dividir as execuções entre os fundos, respeitando:</p>
+    <ul>
+        <li>As alocações originais</li>
+        <li>Quantidades inteiras (não é permitido dividir uma execução em frações)</li>
+        <li>Buscar que o <strong>preço médio de cada fundo</strong> fique o mais próximo possível do <strong>preço médio da ordem</strong></li>
+    </ul>
+
+    <h2>⚠️ Parte 2 – Dificuldades do Problema</h2>
+    <ul>
+        <li>As execuções têm <strong>preços variados</strong>, o que torna difícil manter o preço médio dos fundos próximo ao global.</li>
+        <li>A divisão deve ser feita com <strong>quantidades inteiras</strong>, o que limita a precisão da alocação.</li>
+        <li>Fundos com alocações pequenas podem ser mais sensíveis a variações de preço.</li>
+        <li>O número de execuções por cenário varia entre <strong>10 e 1000</strong>, aumentando a complexidade combinatória.</li>
+    </ul>
+
+    <h2>🧠 Parte 3 – Sua Missão</h2>
+    <p>Você receberá dois arquivos CSV:</p>
+    <ol>
+        <li><code>alocacao_ordem.csv</code> – Colunas: <code>fundo</code>, <code>quantidade</code></li>
+        <li><code>massa_execucoes_500_cenarios.csv</code> – Colunas: <code>cenario_id</code>, <code>execucao_id</code>, <code>quantidade</code>, <code>preco</code>, <code>tipo_distribuicao</code></li>
+    </ol>
+    <p><strong>Sua missão é:</strong> Desenvolver um <strong>único algoritmo genético em Python</strong> capaz de resolver <strong>qualquer cenário de execução</strong>, respeitando as alocações e buscando minimizar a diferença entre os preços médios dos fundos e o preço médio da ordem. Para este desafio, você deverá aplicar seu algoritmo aos <strong>500 cenários de teste fornecidos</strong>.</p>
+
+    <h2>📦 Parte 4 – Entregáveis</h2>
+    <p>O candidato deverá entregar:</p>
+    <ol>
+        <li><strong>Script Python</strong> (<code>divisao_execucoes.py</code>)</li>
+        <li><strong>Arquivo Excel</strong> (<code>resultado_divisao.xlsx</code>) com a divisão final das execuções entre os fundos para cada cenário</li>
+        <li><strong>Documento de Explicação</strong> (<code>explicacao_projeto.pdf</code> ou <code>.md</code>) com:
+            <ul>
+                <li>Descrição do raciocínio e decisões tomadas</li>
+                <li>Desafios enfrentados</li>
+                <li>Tecnologias utilizadas</li>
+                <li>Conclusões e sugestões de melhoria</li>
+            </ul>
+        </li>
+    </ol>
+
+
+</body></html>
