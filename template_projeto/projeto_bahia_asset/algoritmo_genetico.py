@@ -24,24 +24,35 @@ class AlgoritmoGenetico:
 
         # Métricas globais do cenário
         self.total_acoes = self.cotas.sum()
+        # Proporção ideal de cada carteira na ordem consolidada (ex: 47% para Fundo 1, 0,2% para Fundo 7)
         self.proporcoes = self.cotas / self.total_acoes
+        # Preço Médio Ponderado Global de referência da ordem fiduciária (R$ 10,48)
         self.pu_global = (self.qtd_execucoes * self.precos).sum() / self.total_acoes
         self.n_execucoes = len(self.qtd_execucoes)
         self.n_fundos = len(self.cotas)
 
-        # Pré-cálculo da base inteira pro-rata e saldos residuais
+        # np.outer gera a matriz teórica contínua (N x 7) via produto externo das quantidades pelos percentuais
         cotas_teoricas = np.outer(self.qtd_execucoes, self.proporcoes)
+        
+        # Piso inteiro (floor): garante a maior fatia proporcional em números inteiros sem violar custódia
         self.alocacao_base = np.floor(cotas_teoricas).astype(np.int64)
+        
+        # Ações residuais em cada execução que sobraram após a distribuição da base inteira
         self.saldo_linhas_base = (self.qtd_execucoes - self.alocacao_base.sum(axis=1)).astype(np.int64)
+        
+        # Cotas pendentes que cada fundo ainda precisa receber para atingir sua meta contratada
         self.saldo_colunas_base = (self.cotas - self.alocacao_base.sum(axis=0)).astype(np.int64)
 
     def avaliar(self, individuo: np.ndarray) -> Tuple[float, float, np.ndarray]:
         """Calcula o Preço Unitário Médio por fundo e a nota de fitness via Erro Quadrático Médio."""
+        # Multiplicação matricial com broadcast: pondera as ações alocadas pelo preço de cada execução
         financeiro_fundos = (individuo * self.precos[:, None]).sum(axis=0)
+        # Preço Médio Unitário (PU) resultante de cada fundo no cenário
         pu_fundos = financeiro_fundos / self.cotas
         
-        # O MSE penaliza desvios grandes, protegendo as carteiras menores contra distorções
+        # O MSE eleva os desvios ao quadrado (e^2), penalizando desvios pontuais e protegendo fundos menores
         mse = float(np.mean((pu_fundos - self.pu_global) ** 2))
+        # Normalização contínua no intervalo (0, 1] para a seleção evolutiva proporcional
         aptidao = 1.0 / (1.0 + mse)
         return aptidao, mse, pu_fundos
 
@@ -51,16 +62,20 @@ class AlgoritmoGenetico:
         saldo_linhas = self.saldo_linhas_base.copy()
         saldo_colunas = self.saldo_colunas_base.copy()
 
+        # Embaralha a ordem de visitação dos lotes para garantir diversidade inicial na população
         ordem_lotes = list(range(self.n_execucoes))
         random.shuffle(ordem_lotes)
 
         for j in ordem_lotes:
             sobra_lote = saldo_linhas[j]
             while sobra_lote > 0:
+                # Filtra apenas carteiras que ainda possuem cotas pendentes para receber
                 fundos_candidatos = [f for f in range(self.n_fundos) if saldo_colunas[f] > 0]
                 if not fundos_candidatos:
                     break
                 f = random.choice(fundos_candidatos)
+                
+                # Transfere o máximo possível de cotas residuais sem estourar o lote nem o fundo
                 delta = min(sobra_lote, saldo_colunas[f])
                 individuo[j, f] += delta
                 sobra_lote -= delta
@@ -76,11 +91,14 @@ class AlgoritmoGenetico:
     def crossover(self, pai1: np.ndarray, pai2: np.ndarray) -> np.ndarray:
         """Recombina duas soluções candidatas com corte transversal e reparo conservativo de cotas."""
         ponto_corte = random.randint(1, self.n_execucoes - 1)
+        # Corte horizontal nas linhas da planilha: preserva a integridade de conservação de cada lote
         filho = np.vstack([pai1[:ponto_corte], pai2[ponto_corte:]]).copy()
 
+        # Saldo de cotas por fundo na solução filha (positivo: deficitário | negativo: excedente)
         diferenca_fundos = (self.cotas - filho.sum(axis=0)).astype(np.int64)
         limite_reparos = 60
 
+        # Algoritmo de reparo linear O(N): reequilibra as cotas dos fundos mantendo a soma das linhas intacta
         while limite_reparos > 0:
             limite_reparos -= 1
             deficitarios = [f for f in range(self.n_fundos) if diferenca_fundos[f] > 0]
@@ -92,6 +110,7 @@ class AlgoritmoGenetico:
             f_doa = excedentes[0]
             qtd_transferir = min(diferenca_fundos[f_rec], -diferenca_fundos[f_doa])
 
+            # Localiza execuções onde o fundo doador possui ações alocadas disponíveis para repassar
             lotes_doador = np.where(filho[:, f_doa] > 0)[0]
             if len(lotes_doador) == 0:
                 break
@@ -99,6 +118,7 @@ class AlgoritmoGenetico:
             j = random.choice(lotes_doador)
             delta = min(qtd_transferir, filho[j, f_doa])
 
+            # Transfere as ações dentro da mesma execução j: a soma da linha permanece inalterada
             filho[j, f_doa] -= delta
             filho[j, f_rec] += delta
             diferenca_fundos[f_doa] += delta
@@ -113,6 +133,7 @@ class AlgoritmoGenetico:
             return mutante
 
         for _ in range(num_trocas):
+            # Sorteia dois lotes distintos de execução para explorar a diferença de preços
             j1, j2 = random.sample(range(self.n_execucoes), 2)
             cand_f1 = [f for f in range(self.n_fundos) if mutante[j1, f] > 0]
             cand_f2 = [f for f in range(self.n_fundos) if mutante[j2, f] > 0]
@@ -125,11 +146,18 @@ class AlgoritmoGenetico:
             if f1 == f2:
                 continue
 
+            # Garante que a quantidade transferida não resulte em valores negativos de custódia
             max_delta = min(mutante[j1, f1], mutante[j2, f2])
             if max_delta <= 0:
                 continue
 
             delta = random.randint(1, min(max_delta, 5))
+            
+            # Swaps 2x2 em circuito fechado:
+            # - Variação na linha j1: -delta + delta = 0 (conserva o lote j1)
+            # - Variação na linha j2: -delta + delta = 0 (conserva o lote j2)
+            # - Variação na coluna f1: -delta + delta = 0 (conserva a cota de f1)
+            # - Variação na coluna f2: +delta - delta = 0 (conserva a cota de f2)
             mutante[j1, f1] -= delta
             mutante[j1, f2] += delta
             mutante[j2, f2] -= delta
@@ -145,10 +173,11 @@ class AlgoritmoGenetico:
         for _ in range(self.config.geracoes):
             ordenados = sorted(zip(avaliacoes, populacao), key=lambda item: item[0][0], reverse=True)
             
-            # Elitismo: preserva as melhores soluções
+            # Elitismo: preserva as melhores soluções diretamente para a geração seguinte
             nova_populacao = [ordenados[i][1].copy() for i in range(self.config.tamanho_elite)]
 
             while len(nova_populacao) < self.config.tamanho_populacao:
+                # Seleção por Torneio: seleciona os pais mais aptos entre concorrentes sorteados
                 p1 = max(random.sample(ordenados, self.config.tamanho_torneio), key=lambda x: x[0][0])[1]
                 p2 = max(random.sample(ordenados, self.config.tamanho_torneio), key=lambda x: x[0][0])[1]
 
@@ -166,6 +195,7 @@ class AlgoritmoGenetico:
             populacao = nova_populacao
             avaliacoes = [self.avaliar(ind) for ind in populacao]
 
+        # Extrai a solução com a melhor nota de aptidão (menor MSE) ao término das gerações
         melhor_avaliacao, melhor_solucao = max(zip(avaliacoes, populacao), key=lambda x: x[0][0])
         aptidao, mse, pu_fundos = melhor_avaliacao
         return melhor_solucao, mse, aptidao, pu_fundos

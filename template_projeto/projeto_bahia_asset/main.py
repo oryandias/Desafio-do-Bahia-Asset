@@ -30,9 +30,6 @@ def executar(
     Orquestra a leitura dos dados, execução do AG para todos os cenários e exportação para Excel.
     """
     # Carrega a parametrização inicial da ordem:
-    # - nomes_fundos: Lista com os rótulos ['Fundo 1', 'Fundo 2', ..., 'Fundo 7']
-    # - cotas_fundos: Array com a quantidade de ações contratada por cada fundo (totalizando 100.000)
-    # - df_execucoes: DataFrame bruto contendo as tranches executadas ao longo dos 500 cenários
     nomes_fundos, cotas_fundos, df_execucoes = carregar_dados_ordem(
         caminho_alocacao, caminho_execucoes
     )
@@ -58,14 +55,10 @@ def executar(
         qtd_execucoes = sub_df['quantidade'].to_numpy(dtype=np.int64)
         precos = sub_df['preco'].to_numpy(dtype=np.float64)
 
-        # Instancia o Algoritmo Genético para o cenário específico (injetando as massas no construtor)
+        # Instancia o Algoritmo Genético para o cenário específico 
         otimizador = AlgoritmoGenetico(cotas_fundos, qtd_execucoes, precos, configuracao)
         
         # Executa o processo evolutivo:
-        # - melhor_matriz: Matriz (N x 7) com o número exato de ações de cada lote para cada fundo
-        # - mse: Erro Quadrático Médio obtido entre os fundos e o PU global de R$ 10,48
-        # - aptidao: Nota de fitness normalizada no intervalo (0, 1]
-        # - pu_fundos: Vetor com o Preço Médio Unitário ponderado resultante para cada um dos 7 fundos
         melhor_matriz, mse, aptidao, pu_fundos = otimizador.executar()
 
         # Prepara a tabela de saída do cenário: preserva os dados originais da boleta e anexa as colunas dos fundos

@@ -39,7 +39,7 @@ A missão do sistema de *Order Management System (OMS)* e do Backoffice consiste
    - **Quantidades Estritamente Inteiras:** É vedada a liquidação de frações decimais de ações na custódia dos fundos ($M_{j, f} \in \mathbb{N}$).
    - **Conservação de Massa por Lote:** Cada lote $j$ de tamanho $Q_j$ deve ser integralmente absorvido pelos fundos sem criação ou supressão de ações ($\sum_{f=1}^7 M_{j, f} = Q_j$).
 2. **Equidade Fiduciária (*Fairness*):**
-   - O Preço Médio Unitário ($PU_f$) de cada fundo deve coincidir ao máximo com o benchmark global da ordem ($PU_{\text{global}} = \text{R\$} 10{,}48$). Nenhuma carteira pode ser beneficiada com os lotes mais baratos do pregão em detrimento de fundos menores que recebam apenas lotes inflacionados.
+   - O Preço Médio Unitário ($PU_f$) de cada fundo deve coincidir ao máximo com o benchmark global da ordem ($PU_{\text{global}} =$ R$ 10,48). Nenhuma carteira pode ser beneficiada com os lotes mais baratos do pregão em detrimento de fundos menores que recebam apenas lotes inflacionados.
 
 ---
 
@@ -104,7 +104,7 @@ A cota teórica contínua que cada fundo receberia do lote $j$ pela regra de pro
 
 $$\text{Cota Teórica}_{j, f} = Q_j \times \frac{A_f}{100.000}$$
 
-Se a liquidação em bolsa aceitasse cotas fracionárias, essa divisão entregaria exatamente $PU_f = \text{R\$} 10{,}48$ para todas as carteiras em todas as execuções, com **erro zero absoluto**.
+Se a liquidação em bolsa aceitasse cotas fracionárias, essa divisão entregaria exatamente $PU_f =$ R$ 10,48 para todas as carteiras em todas as execuções, com **erro zero absoluto**.
 
 Como a regulação do mercado acionário exige quantidades inteiras, extraímos a maior parcela inteira garantida por meio da função piso (*floor*):
 
@@ -201,10 +201,10 @@ BahiaAsset_Algo_Genetico/
 ### 4.2. Padrões de Projeto e Práticas de Código Limpo Aplicadas
 
 1. **Princípio da Responsabilidade Única (*Single Responsibility Principle* - SRP):**
-   - [`config.py`]: Responsável exclusivamente por encapsular os hiperparâmetros evolutivos.
-   - [`dados.py`]: Responsável pela leitura, validação estrutural e exportação dos dados.
-   - [`algoritmo_genetico.py`]: Isola o modelo matemático e os operadores de otimização evolutiva.
-   - [`main.py`]: Orquestra o loop de cenários e o cálculo das métricas de monitoramento.
+   - `config.py`: Responsável exclusivamente por encapsular os hiperparâmetros evolutivos.
+   - `dados.py`: Responsável pela leitura, validação estrutural e exportação dos dados.
+   - `algoritmo_genetico.py`: Isola o modelo matemático e os operadores de otimização evolutiva.
+   - `main.py`: Orquestra o loop de cenários e o cálculo das métricas de monitoramento.
 
 2. **Parameter Object Pattern:**
    Os hiperparâmetros evolutivos são concentrados na classe imutável `@dataclass ConfiguracaoAG`, evitando a dispersão de variáveis globais e facilitando eventuais baterias de calibração (*grid search*):
@@ -229,14 +229,14 @@ BahiaAsset_Algo_Genetico/
 ### 5.1. Métricas de Performance e SLA Operacional
 A solução foi executada sobre os 500 cenários disponibilizados (totalizando mais de **250.000 linhas de execução**):
 
-| Métrica de Aferição | Resultado Obtido | Meta / Padrão de Mercado |
-| :--- | :--- | :--- |
-| **Tempo Total de Processamento** | **84,3 segundos (~1,4 min)** | < 15 minutos (fechamento D+0) |
-| **Tempo Médio por Cenário** | **~0,17 segundos** | < 1,00 segundo |
-| **Erro Quadrático Médio (MSE Médio)** | **$3{,}94 \times 10^{-7}$** | < $10^{-4}$ |
-| **Desvio Máximo Médio por Fundo** | **R$ 0,0018** (< 2 décimos de centavo) | < R$ 0,01 (1 centavo) |
-| **Conformidade de Cotas (Hard Constraint)** | **100% de exatidão** (0 falhas) | 100% regulatório |
-| **Conservação de Massa por Lote** | **100% de exatidão** (0 resíduos) | 100% contábil |
+| Métrica de Aferição | Resultado Obtido |
+| :--- | :--- |
+| **Tempo Total de Processamento** | **84,3 segundos (~1,4 min)** |
+| **Tempo Médio por Cenário** | **~0,17 segundos** |
+| **Erro Quadrático Médio (MSE Médio)** | **$3{,}94 \times 10^{-7}$** |
+| **Desvio Máximo Médio por Fundo** | **R$ 0,0018** (< 2 décimos de centavo) |
+| **Conformidade de Cotas (Hard Constraint)** | **100% de exatidão** (0 falhas) |
+| **Conservação de Massa por Lote** | **100% de exatidão** (0 resíduos) |
 
 ### 5.2. Estrutura da Planilha Gerada (`resultado_divisao.xlsx`)
 O arquivo final gerado pelo script contém duas abas detalhadas:
