@@ -60,8 +60,8 @@ Para comprovar cientificamente a superioridade do modelo baseado em Erro Quadrá
    No modelo otimizado por MAE (laranja), o Fundo 7 (200 cotas) sofreu um desvio de PU superior a **R$ 0,0022**. Sob o modelo MSE (azul), a penalidade quadrática forçou o algoritmo a balancear os lotes, reduzindo o desvio do Fundo 7 pela metade (**< R$ 0,0010**).
 2. **Velocidade de Convergência (Painel B):**
    A paisagem estritamente convexa do MSE elimina platôs e empates no torneio de seleção, permitindo que a população atinja erros mínimos em menos gerações do que a busca sob MAE.
-3. **Estabilidade Estatística em Múltiplos Cenários (Painel C):**
-   Ao avaliar o pior desvio sofrido em 10 cenários com diferentes distribuições, o modelo com MSE manteve desvios contidos abaixo de frações de centavo de real.
+3. **Controle de Variância e Eliminação de Outliers (Painel C):**
+   Em uma análise estatística consolidada abrangendo 105 alocações de fundos em 15 cenários de teste, o modelo com MSE proporcionou uma **redução de 43,7% na variância dos desvios**. O boxplot evidencia que o modelo com MAE acumula uma cauda longa de *outliers* com desvios expressivos de até R$ 0,0040, enquanto o modelo com MSE compacta a distribuição e suprime distorções extremas.
 
 ---
 

@@ -400,12 +400,17 @@ if __name__ == '__main__':
     CAMINHO_ALOC = os.path.join(BASE_DIR, 'alocacao_ordem.csv')
     CAMINHO_EXEC = os.path.join(BASE_DIR, 'massa_execucoes_500_cenarios.csv')
     CAMINHO_OUT_EXCEL = os.path.join(BASE_DIR, 'resultado_divisao.xlsx')
-    
-    # Por padrão, executa todos os 500 cenários
-    # Para testar rapidamente apenas alguns cenários, altere max_cenarios (ex: max_cenarios=5)
     processar_todos_os_cenarios(
         caminho_alocacao=CAMINHO_ALOC,
         caminho_execucoes=CAMINHO_EXEC,
         caminho_saida_excel=CAMINHO_OUT_EXCEL,
-        max_cenarios=5  # Teste inicial com os 5 primeiros cenários
+        max_cenarios=None  # Processa todos os 500 cenários
     )
+    
+    # Salva também uma cópia no template_projeto
+    caminho_template_excel = os.path.join(BASE_DIR, 'template_projeto', 'resultado_divisao.xlsx')
+    if os.path.exists(CAMINHO_OUT_EXCEL):
+        import shutil
+        shutil.copyfile(CAMINHO_OUT_EXCEL, caminho_template_excel)
+        print(f"Cópia sincronizada em: {caminho_template_excel}")
+

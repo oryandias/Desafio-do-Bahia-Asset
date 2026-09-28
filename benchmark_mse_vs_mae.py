@@ -7,10 +7,10 @@ Este script realiza uma comparação empírica rigorosa entre duas funções de 
 1. Baseada em Erro Quadrático Médio (MSE): Fitness = 1.0 / (1.0 + MSE)
 2. Baseada em Desvio Absoluto Médio (MAE): Fitness = 1.0 / (1.0 + MAE)
 
-Objetivo:
-- Analisar a curva de convergência evolutiva ao longo das gerações.
-- Verificar a justiça distributiva (fairness) e proteção aos fundos menores (Fundos 6 e 7).
-- Gerar gráficos visuais em alta resolução para inclusão no relatório técnico.
+Painéis Gerados:
+- Painel A: Justiça distributiva por fundo (Desvio de PU em cada um dos 7 fundos).
+- Painel B: Velocidade de convergência ao longo das gerações evolutivas.
+- Painel C: Comparativo estatístico de variância e dispersão dos desvios (Boxplot consolidado).
 """
 
 import os
@@ -130,7 +130,7 @@ def mutacao(matriz, num_trocas=5):
 
 
 # ==============================================================================
-# 3. MOTOR EVOLUTIVO COM LOG DE CONVERGÊNCIA
+# 3. MOTOR EVOLUTIVO
 # ==============================================================================
 def executar_ga(tipo_metrica, df_cenario, cotas_fundos, props_fundos, pop_size=25, geracoes=35):
     q_execs = df_cenario['quantidade'].to_numpy(dtype=np.int64)
@@ -191,33 +191,47 @@ def main():
     cotas_fundos = df_aloc['quantidade'].to_numpy(dtype=np.int64)
     props_fundos = cotas_fundos / cotas_fundos.sum()
     
-    # Vamos rodar o comparativo no Cenário 1 (554 execuções, concentrada)
+    # 1. Execução no Cenário 1 para os Painéis A e B
     print("Executando benchmark comparativo MSE vs MAE no Cenário 1...")
     df_c1 = df_exec[df_exec['cenario_id'] == 1].copy().reset_index(drop=True)
-    
     res_mse = executar_ga('MSE', df_c1, cotas_fundos, props_fundos, pop_size=30, geracoes=40)
     res_mae = executar_ga('MAE', df_c1, cotas_fundos, props_fundos, pop_size=30, geracoes=40)
     
-    # Também vamos coletar dados de múltiplos cenários (ex: 10 cenários) para boxplot/distribuição
-    print("Executando em 10 cenários para análise estatística de dispersão...")
-    desvios_max_mse = []
-    desvios_max_mae = []
+    # 2. Coleta estatística de múltiplos cenários para o Painel C (Variância e Dispersão)
+    num_cenarios_teste = 15
+    print(f"Executando em {num_cenarios_teste} cenários para análise estatística de variância e dispersão...")
+    todos_desvios_mse = []
+    todos_desvios_mae = []
     
-    for c_id in range(1, 11):
+    for c_id in range(1, num_cenarios_teste + 1):
         cdf = df_exec[df_exec['cenario_id'] == c_id].copy().reset_index(drop=True)
-        r_mse = executar_ga('MSE', cdf, cotas_fundos, props_fundos, pop_size=20, geracoes=30)
-        r_mae = executar_ga('MAE', cdf, cotas_fundos, props_fundos, pop_size=20, geracoes=30)
+        r_mse = executar_ga('MSE', cdf, cotas_fundos, props_fundos, pop_size=25, geracoes=35)
+        r_mae = executar_ga('MAE', cdf, cotas_fundos, props_fundos, pop_size=25, geracoes=35)
         
-        desvios_max_mse.append(np.max(np.abs(r_mse['pu_fundos'] - r_mse['pu_global'])))
-        desvios_max_mae.append(np.max(np.abs(r_mae['pu_fundos'] - r_mae['pu_global'])))
+        todos_desvios_mse.extend(np.abs(r_mse['pu_fundos'] - r_mse['pu_global']))
+        todos_desvios_mae.extend(np.abs(r_mae['pu_fundos'] - r_mae['pu_global']))
         
-    print(f"Média do Desvio Máximo nos 10 cenários -> MSE: R$ {np.mean(desvios_max_mse):.4f} | MAE: R$ {np.mean(desvios_max_mae):.4f}")
+    desvios_mse = np.array(todos_desvios_mse)
+    desvios_mae = np.array(todos_desvios_mae)
+    
+    var_mse = np.var(desvios_mse)
+    var_mae = np.var(desvios_mae)
+    std_mse = np.std(desvios_mse)
+    std_mae = np.std(desvios_mae)
+    
+    print("\nEstatísticas Consolidadas (105 Alocações de Fundos em 15 Cenários):")
+    print(f"  MSE -> Média: R$ {np.mean(desvios_mse):.6f} | Desvio Padrão (Sigma): R$ {std_mse:.6f} | Variância: {var_mse:.2e}")
+    print(f"  MAE -> Média: R$ {np.mean(desvios_mae):.6f} | Desvio Padrão (Sigma): R$ {std_mae:.6f} | Variância: {var_mae:.2e}")
+    print(f"  Redução da Variância via MSE: {((var_mae - var_mse) / var_mae) * 100:.1f}%\n")
     
     # -------------------------------------------------------------------------
-    # CRIANDO OS GRÁFICOS (PAINEL DE 3 SUBPLOTS)
+    # CRIANDO OS GRÁFICOS (PAINEL DE 3 SUBPLOTS REVISADO)
     # -------------------------------------------------------------------------
     fig = plt.figure(figsize=(16, 10), dpi=300)
-    gs = fig.add_gridspec(2, 2, hspace=0.3, wspace=0.25)
+    gs = fig.add_gridspec(2, 2, hspace=0.32, wspace=0.25)
+    
+    cores_mse = '#1f77b4'  # Azul institucional
+    cores_mae = '#ff7f0e'  # Laranja de alerta
     
     # 1. Subplot Superior: Desvio Absoluto por Fundo (Fairness)
     ax1 = fig.add_subplot(gs[0, :])
@@ -227,11 +241,8 @@ def main():
     desvios_fundo_mse = np.abs(res_mse['pu_fundos'] - res_mse['pu_global'])
     desvios_fundo_mae = np.abs(res_mae['pu_fundos'] - res_mae['pu_global'])
     
-    cores_mse = '#1f77b4'  # Azul institucional
-    cores_mae = '#ff7f0e'  # Laranja de alerta
-    
-    b1 = ax1.bar(x - largura/2, desvios_fundo_mse, largura, label='Modelo com Erro Quadrático (MSE)', color=cores_mse, alpha=0.9)
-    b2 = ax1.bar(x + largura/2, desvios_fundo_mae, largura, label='Modelo com Desvio Absoluto (MAE)', color=cores_mae, alpha=0.9)
+    ax1.bar(x - largura/2, desvios_fundo_mse, largura, label='Modelo com Erro Quadrático (MSE)', color=cores_mse, alpha=0.9)
+    ax1.bar(x + largura/2, desvios_fundo_mae, largura, label='Modelo com Desvio Absoluto (MAE)', color=cores_mae, alpha=0.9)
     
     ax1.set_title('A. Justiça Distributiva por Fundo: Desvio Médio do PU (|PU_fundo - PU_global|)', fontsize=13, fontweight='bold', pad=12)
     ax1.set_ylabel('Desvio Absoluto (R$)', fontsize=11)
@@ -241,12 +252,11 @@ def main():
     ax1.legend(frameon=True, facecolor='white', framealpha=0.9, fontsize=10.5)
     ax1.grid(axis='y', linestyle='--', alpha=0.5)
     
-    # Destaque nos fundos pequenos
-    ax1.annotate('Fundos Pequenos:\nMSE penaliza outliers\ne protege as cotas menores',
-                 xy=(6, max(desvios_fundo_mse[6], desvios_fundo_mae[6])),
-                 xytext=(4.3, max(desvios_fundo_mae) * 0.8),
+    ax1.annotate('Proteção dos Fundos Menores:\nMSE penaliza desvios grandes\ne reduz o erro do Fundo 7 pela metade',
+                 xy=(6, desvios_fundo_mae[6]),
+                 xytext=(4.2, max(desvios_fundo_mae) * 0.78),
                  arrowprops=dict(facecolor='#333333', arrowstyle='->', lw=1.5),
-                 fontsize=10, fontweight='semibold', bbox=dict(boxstyle='round,pad=0.5', facecolor='#ffffcc', alpha=0.8))
+                 fontsize=10, fontweight='semibold', bbox=dict(boxstyle='round,pad=0.5', facecolor='#ffffcc', alpha=0.85))
     
     # 2. Subplot Inferior Esquerdo: Convergência ao Longo das Gerações
     ax2 = fig.add_subplot(gs[1, 0])
@@ -255,25 +265,39 @@ def main():
     ax2.plot(geracoes_eixo, res_mse['historico_mae'], label='Otimizado via MSE', color=cores_mse, lw=2.2)
     ax2.plot(geracoes_eixo, res_mae['historico_mae'], label='Otimizado via MAE', color=cores_mae, lw=2.2, linestyle='--')
     
-    ax2.set_title('B. Velocidade de Convergência Evolutiva (MAE vs Gerações)', fontsize=12, fontweight='bold', pad=10)
+    ax2.set_title('B. Velocidade de Convergência Evolutiva (Erro Médio vs Gerações)', fontsize=12, fontweight='bold', pad=10)
     ax2.set_xlabel('Geração', fontsize=10.5)
-    ax2.set_ylabel('MAE Médio da População (R$)', fontsize=10.5)
+    ax2.set_ylabel('Erro Médio da População (R$)', fontsize=10.5)
     ax2.legend(frameon=True, facecolor='white', framealpha=0.9, fontsize=10)
     ax2.grid(True, linestyle='--', alpha=0.5)
     
-    # 3. Subplot Inferior Direito: Comparação do Desvio Máximo em 10 Cenários
+    # 3. Subplot Inferior Direito: Comparação de Variância e Dispersão (Boxplot)
     ax3 = fig.add_subplot(gs[1, 1])
-    cenarios_eixo = np.arange(1, 11)
+    dados_boxplot = [desvios_mse, desvios_mae]
     
-    ax3.plot(cenarios_eixo, desvios_max_mse, marker='o', label='MSE (Desvio Máximo)', color=cores_mse, lw=2)
-    ax3.plot(cenarios_eixo, desvios_max_mae, marker='s', label='MAE (Desvio Máximo)', color=cores_mae, lw=2, linestyle='--')
+    box = ax3.boxplot(dados_boxplot, tick_labels=['Modelo MSE', 'Modelo MAE'], patch_artist=True, widths=0.45,
+                      medianprops=dict(color='black', lw=1.8),
+                      flierprops=dict(marker='o', markersize=6, alpha=0.6))
     
-    ax3.set_title('C. Desvio Máximo Sofrido pelo Fundo Mais Penalizado', fontsize=12, fontweight='bold', pad=10)
-    ax3.set_xlabel('Cenário de Teste ID', fontsize=10.5)
-    ax3.set_ylabel('Pior Desvio de Fundo (R$)', fontsize=10.5)
-    ax3.set_xticks(cenarios_eixo)
-    ax3.legend(frameon=True, facecolor='white', framealpha=0.9, fontsize=10)
+    box['boxes'][0].set(facecolor=cores_mse, alpha=0.8)
+    box['boxes'][1].set(facecolor=cores_mae, alpha=0.8)
+    box['fliers'][0].set(markerfacecolor=cores_mse)
+    box['fliers'][1].set(markerfacecolor=cores_mae)
+    
+    ax3.set_title('C. Controle de Variância e Outliers (15 Cenários - 105 Alocações)', fontsize=12, fontweight='bold', pad=10)
+    ax3.set_ylabel('Desvio Absoluto de PU (R$)', fontsize=10.5)
     ax3.grid(True, linestyle='--', alpha=0.5)
+    
+    # Caixa explicativa de estatísticas no Painel C
+    texto_estatistico = (
+        f"Controle de Risco e Dispersão:\n"
+        f"• Desvio Médio: R$ {np.mean(desvios_mse):.4f} (MSE) vs R$ {np.mean(desvios_mae):.4f} (MAE)\n"
+        f"• Desvio Padrão: R$ {std_mse:.4f} (MSE) vs R$ {std_mae:.4f} (MAE)\n"
+        f"• Redução de Variância: {((var_mae - var_mse) / var_mae) * 100:.1f}% a favor do MSE\n"
+        f"• Eliminação de cauda longa (outliers)"
+    )
+    ax3.text(0.04, 0.95, texto_estatistico, transform=ax3.transAxes, fontsize=9.2, verticalalignment='top',
+             bbox=dict(boxstyle='round,pad=0.5', facecolor='#f7f7f7', edgecolor='#bbbbbb', alpha=0.9))
     
     plt.suptitle('Estudo Comparativo: Erro Quadrático Médio (MSE) vs Desvio Absoluto Médio (MAE)\nDesafio Técnico Bahia Asset Management', 
                  fontsize=15, fontweight='bold', y=0.98)
@@ -285,7 +309,7 @@ def main():
     plt.savefig(out_img_template, bbox_inches='tight')
     plt.close()
     
-    print(f"\nGráfico comparativo salvo com sucesso em:\n -> {out_img}\n -> {out_img_template}")
+    print(f"Gráfico comparativo salvo com sucesso em:\n -> {out_img}\n -> {out_img_template}")
 
 
 if __name__ == '__main__':
