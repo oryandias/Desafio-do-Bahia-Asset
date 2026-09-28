@@ -67,14 +67,51 @@ Para comprovar cientificamente a superioridade do modelo baseado em Erro Quadrá
 
 ## 3. Desafios Enfrentados e Decisões de Arquitetura
 
-### Desafio 1: O Espaço de Busca e a Inviabilidade das Soluções Ingênuas
-Em cenários com até 1.000 execuções, o espaço de busca possui $1.000 \times 7 = 7.000$ variáveis inteiras sob restrições de igualdade lineares em duas dimensões (somas de linhas e colunas). 
-Uma abordagem ingênua que gerasse números aleatórios resultaria em $100\%$ de indivíduos inviáveis, tornando a convergência impossível ou extremamente lenta por penalizações.
+### Desafio 1: O Espaço de Busca Restrito e a Decomposição Pro-Rata
 
-**Decisão de Arquitetura (Decomposição Pro-Rata + Resíduos Estocásticos):**
-1. **Base Teórica Ótima:** Se frações fossem permitidas, o rateio ideal seria $Q_j \times \frac{A_f}{100.000}$ para todos os lotes, atingindo erro zero para todos os fundos.
-2. **Piso Inteiro Garantido:** Alocamos inicialmente a base inteira piso: $\lfloor Q_j \times \frac{A_f}{100.000} \rfloor$. Isso resolve mais de 98% do volume de forma rigorosamente justa.
-3. **Resíduos Fechados:** Apenas as frações residuais (de 0 a 5 ações por execução) são sorteadas entre os fundos com saldo aberto, garantindo que **todo indivíduo já nasce 100% viável e factível**.
+#### 1. A Inviabilidade de Abordagens Aleatórias Ingênuas
+Em cenários com até 1.000 execuções e 7 fundos de investimento, a alocação requer preencher uma matriz inteira $M \in \mathbb{N}^{N \times 7}$ ($7.000$ variáveis de decisão) sujeita a um sistema rígido de restrições de igualdade em duas dimensões simultâneas:
+1. **Conservação por Execução (Soma das Linhas):** $\sum_{f=1}^{7} M_{j, f} = Q_j, \quad \forall j \in \{1, \dots, N\}$ (nenhuma ação pode ser criada ou omitida de um lote).
+2. **Conservação por Fundo (Soma das Colunas):** $\sum_{j=1}^{N} M_{j, f} = A_f, \quad \forall f \in \{1, \dots, 7\}$ (cada fundo deve receber exatamente sua cota contratada).
+
+Se um Algoritmo Genético convencional gerasse ou mutasse indivíduos por valores inteiros pseudoaleatórios, a probabilidade de satisfazer simultaneamente todas as somas de linhas e colunas seria matematicamente nula ($P \approx 0$). Penalizar soluções inviáveis na função fitness levaria o algoritmo a ficar preso em regiões sem indivíduos viáveis (*death penalty* ineficaz).
+
+---
+
+#### 2. A Solução Arquitetural: Decomposição em Piso Inteiro Garantido e Ações Residuais
+
+Para contornar a inviabilidade e acelerar drasticamente a convergência, a matriz de decisão é estruturada pela soma de duas parcelas desacopladas:
+
+$$M_{j, f} = \text{Base}_{j, f} + X_{j, f}$$
+
+##### A) O Piso Inteiro Garantido ($\text{Base}_{j, f}$)
+Em teoria de finanças, a divisão perfeitamente equitativa (*pro-rata*) de um lote $j$ entregaria a cada carteira a sua proporção ideal:
+$$\text{Cota Teórica}_{j, f} = Q_j \times \frac{A_f}{100.000}$$
+Se a custódia permitisse frações contínuas de ações, todos os fundos receberiam exatamente essa fatia em cada lote, e o Preço Médio Ponderado ($PU_f$) de todas as carteiras seria **rigorosamente idêntico ao benchmark de R$ 10,48** (erro zero absoluto).
+
+Contudo, como as regras de bolsa exigem **quantidades estritamente inteiras**, extraímos a parte inteira garantida via função piso (*floor*):
+$$\text{Base}_{j, f} = \left\lfloor Q_j \times \frac{A_f}{100.000} \right\rfloor$$
+
+* **O Comportamento nos Fundos Grandes:** Para o Fundo 1 (47.000 ações) e Fundo 2 (23.000 ações), o piso aloca diretamente mais de 98% a 99% das ações de forma proporcional, mantendo o PU médio dessas carteiras imediatamente colado em R$ 10,48.
+* **O Fenômeno do Truncamento nos Fundos Pequenos:** O Fundo 7 detém apenas 200 cotas ($0{,}2\%$ da ordem). Em execuções com menos de 500 ações (a grande maioria dos lotes no pregão), a cota teórica resulta em frações menores que a unidade (ex: $26 \times 0{,}002 = 0{,}052$ ações). Ao aplicar o piso $\lfloor 0{,}052 \rfloor$, o resultado é **0 ações**.
+  * *Impacto Empírico Real:* No Cenário 1 (554 execuções), o Fundo 7 recebe apenas 1 ação na base pura (uma execução grande negociada no pico de R$ 12,32). Seu PU provisório dispara para R$ 12,32 (+R$ 1,84 de distorção), ficando com **199 cotas pendentes**.
+
+##### B) As Ações Residuais ($X_{j, f}$) e o Papel do Algoritmo Genético
+O descarte das partes decimais no truncamento gera duas grandezas residuais complementares:
+1. **Resíduo por Execução ($R_j$):** Quantidade de ações que sobraram no lote $j$ após a distribuição da base inteira:
+   $$R_j = Q_j - \sum_{f=1}^{7} \text{Base}_{j, f} \quad \implies \quad R_j \in \{0, 1, 2, 3, 4, 5, 6\}$$
+2. **Saldo Pendente por Fundo ($\Delta_f$):** Quantidade de ações que faltam para o fundo $f$ completar sua cota:
+   $$\Delta_f = A_f - \sum_{j=1}^{N} \text{Base}_{j, f}$$
+
+Pela propriedade de conservação da soma:
+$$\sum_{j=1}^{N} R_j = \sum_{f=1}^{7} \Delta_f$$
+
+A soma de todas as ações residuais dos lotes é **exatamente igual** à soma das ações que faltam para os fundos.
+
+**Onde o Algoritmo Genético Atua:**
+O AG é liberado do fardo de alocar 100.000 ações do zero e foca sua busca combinatória exclusivamente na **matriz residual $X_{j, f}$**:
+- Ele decide estrategicamente quais lotes residuais com preços abaixo de R$ 10,48 devem ser entregues ao Fundo 7 para anular a execução cara de R$ 12,32 e puxar a média dele de volta para os R$ 10,48.
+- Garante que todo indivíduo gerado nasça **100% factível**, com restrições de linhas e colunas satisfeitas por construção, permitindo que as gerações evolutivas foquem integralmente no refinamento cirúrgico do PU.
 
 ### Desafio 2: Operadores Genéticos que Preservam a Viabilidade
 * **Crossover de Um Ponto com Reparo Conservativo:** 
