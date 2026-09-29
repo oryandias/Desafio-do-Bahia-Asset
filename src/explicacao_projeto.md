@@ -274,7 +274,7 @@ Para garantir o isolamento das dependências, reprodutibilidade dos resultados f
 #### 1. Navegar até a Raiz do Repositório
 Abra o terminal e certifique-se de estar no diretório raiz do projeto:
 ```bash
-cd BahiaAsset_Algo_Genetico
+cd Desafio-do-Bahia-Asset
 ```
 
 #### 2. Criação do Ambiente Virtual (`.venv`)
