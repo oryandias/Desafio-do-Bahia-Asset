@@ -1,5 +1,5 @@
 """
-Pacote projeto_bahia_asset
+Pacote alocador_genetico
 Módulos do Algoritmo Genético para divisão justa de execuções entre fundos.
 """
 

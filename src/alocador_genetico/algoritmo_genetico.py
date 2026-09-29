@@ -26,15 +26,16 @@ class AlgoritmoGenetico:
         self.total_acoes = self.cotas.sum()
         # Proporção ideal de cada carteira na ordem consolidada (ex: 47% para Fundo 1, 0,2% para Fundo 7)
         self.proporcoes = self.cotas / self.total_acoes
-        # Preço Médio Ponderado Global de referência da ordem fiduciária (R$ 10,48)
+
+        # Preço Médio Ponderado Global de referência da ordem fiduciária (poderia preencher com R$10.48, mas é mais usual usar um cálculo dinâmico)
         self.pu_global = (self.qtd_execucoes * self.precos).sum() / self.total_acoes
         self.n_execucoes = len(self.qtd_execucoes)
         self.n_fundos = len(self.cotas)
 
-        # np.outer gera a matriz teórica contínua (N x 7) via produto externo das quantidades pelos percentuais
+        # gera a matriz teórica contínua (N x 7) via produto externo das quantidades pelos percentuais
         cotas_teoricas = np.outer(self.qtd_execucoes, self.proporcoes)
         
-        # Piso inteiro (floor): garante a maior fatia proporcional em números inteiros sem violar custódia
+        # Piso inteiro: garante a maior fatia proporcional em números inteiros sem violar custódia
         self.alocacao_base = np.floor(cotas_teoricas).astype(np.int64)
         
         # Ações residuais em cada execução que sobraram após a distribuição da base inteira
@@ -47,12 +48,11 @@ class AlgoritmoGenetico:
         """Calcula o Preço Unitário Médio por fundo e a nota de fitness via Erro Quadrático Médio."""
         # Multiplicação matricial com broadcast: pondera as ações alocadas pelo preço de cada execução
         financeiro_fundos = (individuo * self.precos[:, None]).sum(axis=0)
-        # Preço Médio Unitário (PU) resultante de cada fundo no cenário
+
         pu_fundos = financeiro_fundos / self.cotas
         
-        # O MSE eleva os desvios ao quadrado (e^2), penalizando desvios pontuais e protegendo fundos menores
         mse = float(np.mean((pu_fundos - self.pu_global) ** 2))
-        # Normalização contínua no intervalo (0, 1] para a seleção evolutiva proporcional
+
         aptidao = 1.0 / (1.0 + mse)
         return aptidao, mse, pu_fundos
 
@@ -94,11 +94,11 @@ class AlgoritmoGenetico:
         # Corte horizontal nas linhas da planilha: preserva a integridade de conservação de cada lote
         filho = np.vstack([pai1[:ponto_corte], pai2[ponto_corte:]]).copy()
 
-        # Saldo de cotas por fundo na solução filha (positivo: deficitário | negativo: excedente)
+        # Saldo de cotas por fundo na solução filha 
         diferenca_fundos = (self.cotas - filho.sum(axis=0)).astype(np.int64)
         limite_reparos = 60
 
-        # Algoritmo de reparo linear O(N): reequilibra as cotas dos fundos mantendo a soma das linhas intacta
+        # Algoritmo de reparo linear: reequilibra as cotas dos fundos mantendo a soma das linhas intacta
         while limite_reparos > 0:
             limite_reparos -= 1
             deficitarios = [f for f in range(self.n_fundos) if diferenca_fundos[f] > 0]
@@ -153,11 +153,7 @@ class AlgoritmoGenetico:
 
             delta = random.randint(1, min(max_delta, 5))
             
-            # Swaps 2x2 em circuito fechado:
-            # - Variação na linha j1: -delta + delta = 0 (conserva o lote j1)
-            # - Variação na linha j2: -delta + delta = 0 (conserva o lote j2)
-            # - Variação na coluna f1: -delta + delta = 0 (conserva a cota de f1)
-            # - Variação na coluna f2: +delta - delta = 0 (conserva a cota de f2)
+            # Swaps 2x2 em circuito fechado
             mutante[j1, f1] -= delta
             mutante[j1, f2] += delta
             mutante[j2, f2] -= delta

@@ -70,9 +70,9 @@ $$\text{Fitness} = \frac{1}{1 + \text{MSE}}$$
 * Não há assíntotas ou indeterminações numéricas, garantindo estabilidade ao longo do processo evolutivo.
 
 ### 2.4. Validação Empírica: Benchmark MSE vs. MAE
-O script [`benchmark_grafico.py`] realiza a comparação estatística entre os dois critérios sob condições de contorno idênticas.
+O script [`teste_benchmark/benchmark_grafico.py`] realiza a comparação estatística entre os dois critérios sob condições de contorno idênticas.
 
-![Validação Empírica MSE vs MAE](comparativo_mse_vs_mae.png)
+![Validação Empírica MSE vs MAE](teste_benchmark/comparativo_mse_vs_mae.png)
 
 **Conclusões Técnicas da Validação Empírica:**
 1. **Proteção Fiduciária aos Fundos Menores (Painel A):** Sob otimização com MAE, o Fundo 7 registra desvio de PU superior a **R$ 0,0022**. Sob MSE, a penalidade quadrática reduz o desvio do Fundo 7 para menos da metade (**< R$ 0,0010**), equalizando o tratamento dispensado a cotistas institucionais e pequenos.
@@ -171,7 +171,7 @@ Para garantir que a busca evolutiva não destrua a conformidade das matrizes ger
 ## 4. Estrutura do Projeto, Engenharia de Software e Clean Code
 
 ### 4.1. Arquitetura Modular e Organização de Pastas
-O código funcional foi encapsulado em um pacote dedicado (`projeto_bahia_asset`), preservando a raiz do repositório limpa e mantendo na pasta de entrega (`template_projeto/`) apenas os executáveis, relatórios e artefatos de entrega:
+O código funcional foi encapsulado em um pacote dedicado (`alocador_genetico`), preservando a raiz do repositório limpa e mantendo na pasta de entrega e código-fonte (`src/`) apenas os executáveis, relatórios e artefatos de entrega:
 
 ```
 BahiaAsset_Algo_Genetico/
@@ -179,16 +179,18 @@ BahiaAsset_Algo_Genetico/
 ├── alocacao_ordem.csv                     # Dados de entrada da ordem
 ├── massa_execucoes_500_cenarios.csv       # Execuções dos 500 cenários simulados
 ├── preco_medio_por_cenario.csv            # Preços médios de referência
-├── README.md                              # Documentação original do desafio (12 linhas)
+├── README.md                              # Documentação original do desafio 
+├── Desafio Técnico - Divisão de Execuções entre Fundos.html # Especificação original do desafio
 │
-└── template_projeto/                      # Diretório de entrega e execução
+└── src/                                   # Diretório principal de código-fonte e entrega
     ├── divisao_execucoes.py               # Ponto de entrada oficial (CLI do desafio)
-    ├── benchmark_grafico.py               # Script de benchmarking empírico (MSE vs MAE)
-    ├── comparativo_mse_vs_mae.png         # Gráfico comprobatório gerado
     ├── resultado_divisao.xlsx             # Planilha com 250.000 alocações consolidadas
     ├── explicacao_projeto.md              # Documentação técnica e arquitetural
     ├── requirements.txt                   # Dependências do projeto
-    └── projeto_bahia_asset/               # Pacote funcional das regras de negócio
+    ├── teste_benchmark/                   # Análises comparativas e validação empírica
+    │   ├── benchmark_grafico.py           # Script de benchmarking empírico (MSE vs MAE)
+    │   └── comparativo_mse_vs_mae.png     # Gráfico comprobatório gerado
+    └── alocador_genetico/                 # Pacote Python com o núcleo da lógica de negócio
         ├── __init__.py                    # Interface pública do pacote
         ├── config.py                      # Parameter Object com hiperparâmetros
         ├── dados.py                       # Camada de I/O, resolução de caminhos e Excel
@@ -256,3 +258,83 @@ O algoritmo desenvolvido atende integralmente a todos os requisitos do desafio t
    Como os cenários são estocasticamente independentes, a função `executar()` pode facilmente ser adaptada com `concurrent.futures.ProcessPoolExecutor` para distribuir os cenários entre os núcleos do servidor, reduzindo o tempo total de processamento de 84 segundos para **menos de 20 segundos**.
 3. **Módulo de Reconciliação Automática de D+0:**
    Implementação de rotina de batimento em tempo real que envie alertas automáticos caso algum lote apresente desvio fiduciário superior à tolerância contratada da gestora.
+
+---
+
+## 7. Guia de Reprodução: Configuração de Ambiente e Execução
+
+Para garantir o isolamento das dependências, reprodutibilidade dos resultados fiduciários e conformidade de execução perante a auditoria, recomenda-se a utilização de um ambiente virtual Python (`venv`).
+
+### 7.1. Pré-requisitos
+* **Python:** Versão 3.10 ou superior (solução desenvolvida e homologada em Python 3.12).
+* **Terminal de Linha de Comando:** Bash (Linux/macOS) ou PowerShell / CMD (Windows).
+
+### 7.2. Passo a Passo de Instalação
+
+#### 1. Navegar até a Raiz do Repositório
+Abra o terminal e certifique-se de estar no diretório raiz do projeto:
+```bash
+cd BahiaAsset_Algo_Genetico
+```
+
+#### 2. Criação do Ambiente Virtual (`.venv`)
+Execute o comando correspondente ao seu sistema operacional:
+
+* **Linux / macOS:**
+  ```bash
+  python3 -m venv .venv
+  ```
+* **Windows (PowerShell / CMD):**
+  ```powershell
+  python -m venv .venv
+  ```
+
+#### 3. Ativação do Ambiente Virtual
+
+* **Linux / macOS (Bash/Zsh):**
+  ```bash
+  source .venv/bin/activate
+  ```
+* **Windows (PowerShell):**
+  ```powershell
+  .venv\Scripts\Activate.ps1
+  ```
+  *(Caso haja restrição de execução de scripts no PowerShell, execute previamente `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`)*
+* **Windows (Prompt de Comando / CMD):**
+  ```cmd
+  .venv\Scripts\activate.bat
+  ```
+
+> [!NOTE]
+> Quando o ambiente virtual estiver ativo, o prompt do terminal exibirá o prefixo `(.venv)`.
+
+#### 4. Instalação das Dependências Fixadas
+Com o ambiente ativado, atualize o gerenciador de pacotes (`pip`) e instale as bibliotecas declaradas no arquivo `requirements.txt`:
+```bash
+python -m pip install --upgrade pip
+pip install -r src/requirements.txt
+```
+
+---
+
+### 7.3. Comandos de Execução
+
+#### 1. Execução Principal (Otimização dos 500 Cenários e Geração do Excel)
+Para rodar a solução oficial completa do desafio técnico e produzir a planilha com as 250.000 alocações consolidadas:
+```bash
+python src/divisao_execucoes.py
+```
+*O script localiza automaticamente as massas de dados na raiz, processa os 500 cenários em tempo real com logging de progresso e gera o arquivo `src/resultado_divisao.xlsx`.*
+
+#### 2. Execução da Validação Empírica (Benchmark MSE vs. MAE)
+Para recalcular o benchmark comparativo e regenerar o gráfico comprobatório:
+```bash
+python src/teste_benchmark/benchmark_grafico.py
+```
+*Gera a figura `src/teste_benchmark/comparativo_mse_vs_mae.png` contendo os três painéis analíticos, caso já houver uma figura, ele substitui pela nova gerada no momento.*
+
+#### 3. Desativação do Ambiente Virtual
+Ao concluir as análises ou testes, você pode desativar o ambiente virtual digitando:
+```bash
+deactivate
+```

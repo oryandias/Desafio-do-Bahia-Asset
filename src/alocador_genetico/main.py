@@ -10,9 +10,9 @@ if __package__ is None or __package__ == "":
     diretorio_pai = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if diretorio_pai not in sys.path:
         sys.path.insert(0, diretorio_pai)
-    from projeto_bahia_asset.config import ConfiguracaoAG
-    from projeto_bahia_asset.dados import carregar_dados_ordem, salvar_resultado_excel, localizar_arquivo
-    from projeto_bahia_asset.algoritmo_genetico import AlgoritmoGenetico
+    from alocador_genetico.config import ConfiguracaoAG
+    from alocador_genetico.dados import carregar_dados_ordem, salvar_resultado_excel, localizar_arquivo
+    from alocador_genetico.algoritmo_genetico import AlgoritmoGenetico
 else:
     from .config import ConfiguracaoAG
     from .dados import carregar_dados_ordem, salvar_resultado_excel, localizar_arquivo
@@ -58,10 +58,10 @@ def executar(
         # Instancia o Algoritmo Genético para o cenário específico 
         otimizador = AlgoritmoGenetico(cotas_fundos, qtd_execucoes, precos, configuracao)
         
-        # Executa o processo evolutivo:
+        # Executa o processo evolutivo
         melhor_matriz, mse, aptidao, pu_fundos = otimizador.executar()
 
-        # Prepara a tabela de saída do cenário: preserva os dados originais da boleta e anexa as colunas dos fundos
+        # Prepara a tabela de saída do cenário
         df_resultado = sub_df[[
             'cenario_id', 'execucao_id', 'quantidade', 'preco', 'tipo_distribuicao'
         ]].copy()
@@ -96,7 +96,7 @@ def executar(
     df_consolidado = pd.concat(tabelas_alocadas, ignore_index=True)
     df_metricas = pd.DataFrame(metricas)
 
-    # Grava a pasta de trabalho com as duas abas estruturadas (Divisao_Execucoes e Metricas_Cenarios)
+    # Grava a pasta de trabalho com as duas abas
     salvar_resultado_excel(caminho_saida_excel, df_consolidado, df_metricas)
 
     print("Resultados salvos com sucesso!")

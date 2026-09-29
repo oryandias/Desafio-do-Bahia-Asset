@@ -9,9 +9,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+diretorio_script = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(diretorio_script))
+sys.path.insert(0, diretorio_script)
 
-from projeto_bahia_asset import (
+from alocador_genetico import (
     carregar_dados_ordem,
     localizar_arquivo,
     AlgoritmoGenetico,
@@ -94,7 +96,8 @@ def main():
     res_mse = executar_comparativo('MSE', df_c1, cotas_fundos, pop_size=30, geracoes=40)
     res_mae = executar_comparativo('MAE', df_c1, cotas_fundos, pop_size=30, geracoes=40)
 
-    num_cenarios_teste = 50
+    num_cenarios_teste = 50  # Pode modificar para quantidade de cenários que se deseja testar
+    
     total_alocacoes_esperadas = num_cenarios_teste * len(nomes_fundos)
     print(f"Executando em {num_cenarios_teste} cenários ({total_alocacoes_esperadas} alocações de fundos) para análise estatística de variância e dispersão...")
     todos_desvios_mse = []
